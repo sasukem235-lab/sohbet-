@@ -1,139 +1,178 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+<!doctype html>
 
-import sys
-import os
-import time
-import random
-import urllib.parse
-import json
-import re
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>iPhone-styled Chat — Demo</title>
+  <style>
+    :root{
+      --bg:#f2f5f7;
+      --phone-bg:linear-gradient(180deg,#0f1724 0%, #071428 100%);
+      --bubble-me:#0b93f6;
+      --bubble-you:#e5e7eb;
+      --glass: rgba(255,255,255,0.06);
+      --accent:#34d399;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    html,body{height:100%;margin:0;background:var(--bg);display:grid;place-items:center}/* Phone frame */
+.phone{
+  width:360px;
+  height:720px;
+  border-radius:36px;
+  padding:20px;
+  box-sizing:border-box;
+  background:var(--phone-bg);
+  box-shadow: 0 30px 60px rgba(2,6,23,0.5), inset 0 -10px 30px rgba(0,0,0,0.4);
+  position:relative;
+  overflow:hidden;
+  transform-origin:center center;
+  animation: float 6s ease-in-out infinite;
+}
+@keyframes float{
+  0%{transform: translateY(0) rotate(-1deg)}
+  50%{transform: translateY(-8px) rotate(1deg)}
+  100%{transform: translateY(0) rotate(-1deg)}
+}
 
-try:
-    import requests
-except Exception:
-    requests = None
+/* notch */
+.notch{position:absolute;left:50%;transform:translateX(-50%);top:6px;width:160px;height:30px;background:rgba(0,0,0,0.35);border-radius:14px}
 
-try:
-    from bs4 import BeautifulSoup
-except Exception:
-    BeautifulSoup = None
+/* header */
+.top{color:#fff;text-align:center;padding:8px 0;font-weight:600}
 
-ANSI_COLORS = [
-    '\033[91m', # red
-    '\033[92m', # green
-    '\033[94m', # blue
-]
-ANSI_RESET = '\033[0m'
+/* chat area */
+.screen{height:580px;background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent 30%), url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><g fill="none" stroke="rgba(255,255,255,0.02)" stroke-width="1"><circle cx="100" cy="100" r="60"/><circle cx="40" cy="40" r="20"/><circle cx="160" cy="160" r="10"/></g></svg>') no-repeat right top/180px auto; border-radius:20px; padding:16px; box-sizing:border-box; overflow:auto; scroll-behavior:smooth}
 
-def colorize(s):
-    return f"{random.choice(ANSI_COLORS)}{s}{ANSI_RESET}"
+.messages{display:flex;flex-direction:column;gap:12px;padding-bottom:16px}
 
-def typewriter(text, cps=19920, jitter=0.04, newline=True):
-    delay = 1.0 / max(1, cps)
-    for ch in text:
-        sys.stdout.write(ch)
-        sys.stdout.flush()
-        time.sleep(max(0, delay + random.uniform(-jitter, jitter)))
-    if newline:
-        sys.stdout.write("\n")
-        sys.stdout.flush()
+.msg{max-width:80%;padding:10px 14px;border-radius:18px;line-height:1.2;box-shadow:0 6px 14px rgba(2,6,23,0.35);opacity:0;transform:translateY(18px) scale(0.98);animation:appear .45s forwards cubic-bezier(.22,1,.36,1)}
+@keyframes appear{to{opacity:1;transform:none}}
 
-def fetch_api(site_value):
-    base = "https://free.zirveexec.com/api_public.php"
-    params = {'site': site_value}
-    url = base + "?" + urllib.parse.urlencode(params, safe='')
-    if requests:
-        r = requests.get(url, timeout=15)
-        r.raise_for_status()
-        return r.content, getattr(r, "headers", {}), r
-    else:
-        from urllib import request
-        req = request.Request(url, headers={'User-Agent': 'anim-print/1.0'})
-        with request.urlopen(req, timeout=15) as resp:
-            content = resp.read()
-            headers = dict(resp.getheaders())
-            return content, headers, None
+.me{align-self:flex-end;background:linear-gradient(180deg,var(--bubble-me), #005fbf);color:white;border-bottom-right-radius:6px}
+.you{align-self:flex-start;background:var(--bubble-you);color:#111;border-bottom-left-radius:6px}
 
-def extract_texts_from_json(obj):
-    texts = []
-    if isinstance(obj, dict):
-        for v in obj.values():
-            texts.extend(extract_texts_from_json(v))
-    elif isinstance(obj, list):
-        for v in obj:
-            texts.extend(extract_texts_from_json(v))
-    elif isinstance(obj, (str,)):
-        s = obj.strip()
-        if s:
-            texts.append(s)
-    return texts
+/* subtle typing indicator */
+.typing{display:inline-flex;gap:6px;align-items:center;padding:8px 12px;border-radius:16px;background:var(--bubble-you);}
+.dot{width:8px;height:8px;border-radius:50%;background:#7b7b7b;opacity:0.85;animation:blink 1s infinite}
+.dot:nth-child(2){animation-delay:.15s}
+.dot:nth-child(3){animation-delay:.3s}
+@keyframes blink{0%,80%{opacity:.15;transform:translateY(0)}40%{opacity:1;transform:translateY(-4px)}}
 
-def html_to_text(html_bytes, encoding='utf-8'):
-    try:
-        text = html_bytes.decode(encoding, errors='replace')
-    except Exception:
-        text = html_bytes.decode('utf-8', errors='replace')
-    if BeautifulSoup:
-        soup = BeautifulSoup(text, 'html.parser')
-        for s in soup(["script", "style", "noscript"]):
-            s.decompose()
-        visible = soup.get_text(separator="\n")
-        lines = [ln.strip() for ln in visible.splitlines()]
-        lines = [ln for ln in lines if ln]
-        return lines
-    else:
-        no_tags = re.sub(r'<[^>]+>', '', text)
-        lines = [ln.strip() for ln in no_tags.splitlines()]
-        lines = [ln for ln in lines if ln]
-        return lines
+/* input area */
+.composer{display:flex;gap:10px;align-items:center;padding-top:12px}
+.input{flex:1;background:rgba(255,255,255,0.06);backdrop-filter:blur(6px);padding:12px 14px;border-radius:999px;color:#fff;border:1px solid rgba(255,255,255,0.03);outline:none}
+.btn{background:var(--accent);border:none;padding:10px 14px;border-radius:12px;color:#042;cursor:pointer;font-weight:600}
 
-def gather_texts_from_response(content_bytes, headers=None, response_obj=None):
-    try:
-        decoded = content_bytes.decode('utf-8', errors='strict')
-        parsed = json.loads(decoded)
-        texts = extract_texts_from_json(parsed)
-        if texts:
-            return texts
-    except Exception:
-        pass
-    encoding = None
-    if headers:
-        ct = headers.get('Content-Type', '')
-        m = re.search(r'charset=([^\s;]+)', ct, re.I)
-        if m:
-            encoding = m.group(1)
-    lines = html_to_text(content_bytes, encoding or 'utf-8')
-    return lines
+/* small screens */
+@media(max-width:420px){.phone{width:92vw;height:86vh}}
 
-def present_texts(texts, site_label):
-    # - 8 
-    texts = texts[8:]
-    if not texts:
-        print("Metin yoğ cünki free apiğ.")
-        return
-    for t in texts:
-        s = re.sub(r'\s+', ' ', t).strip()
-        if not s:
-            continue
-        typewriter(colorize(s), cps=120, jitter=0.03)
+/* message bubble slide-in directions */
+.me{animation-name:slide-me, appear;animation-duration:.42s,.45s;animation-timing-function:cubic-bezier(.2,.9,.35,1),cubic-bezier(.22,1,.36,1)}
+.you{animation-name:slide-you, appear;animation-duration:.42s,.45s;animation-timing-function:cubic-bezier(.2,.9,.35,1),cubic-bezier(.22,1,.36,1)}
+@keyframes slide-me{from{transform:translateX(30px) scale(.98);opacity:0}to{transform:none;opacity:1}}
+@keyframes slide-you{from{transform:translateX(-30px) scale(.98);opacity:0}to{transform:none;opacity:1}}
 
-def main():
-    if len(sys.argv) >= 2:
-        site_value = sys.argv[1]
-    else:
-        site_value = input("Site adını gir (ör: purna/purna.com): ").strip()
-        if not site_value:
-            print("Site yok la(yada kod 5satır/free ap diye")
-            return
-    site_value = site_value.strip()
-    try:
-        content, headers, raw_resp_obj = fetch_api(site_value)
-        texts = gather_texts_from_response(content, headers=headers, response_obj=raw_resp_obj)
-    except Exception as e:
-        print(f"Hata: {e}")
-        return
-    present_texts(texts, site_value)
+/* small chrome for cursor */
+.meta{font-size:12px;color:rgba(255,255,255,0.6);text-align:center;margin-top:8px}
 
-if __name__ == "__main__":
-    main()
+  </style>
+</head>
+<body>
+  <div class="phone" role="application" aria-label="iPhone chat demo">
+    <div class="notch"></div>
+    <div class="top">Sohbet — iPhone Demo</div><div id="screen" class="screen" aria-live="polite">
+  <div class="messages" id="messages"></div>
+</div>
+
+<div class="composer">
+  <input id="input" class="input" placeholder="Bir şey yaz..." maxlength="360" />
+  <button id="send" class="btn">Gönder</button>
+</div>
+<div class="meta">Yerel demo · Mesajlar tarayıcıda saklanır</div>
+
+  </div>  <script>
+    // Basit sohbet demo: yerelde saklama + iPhone benzeri animasyon
+    const messagesEl = document.getElementById('messages');
+    const inputEl = document.getElementById('input');
+    const sendBtn = document.getElementById('send');
+    const screen = document.getElementById('screen');
+
+    // yükle
+    const STORAGE_KEY = 'iphone-chat-demo-msgs-v1';
+    let state = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+
+    function render(){
+      messagesEl.innerHTML = '';
+      state.forEach((m, i) => {
+        const el = document.createElement('div');
+        el.className = 'msg ' + (m.from === 'me' ? 'me' : 'you');
+        el.innerHTML = `<div>${escapeHtml(m.text)}</div>`;
+        // staggered animation delay for a more 'live' feel
+        el.style.animationDelay = (i * 40) + 'ms';
+        messagesEl.appendChild(el);
+      });
+      // scroll bottom
+      requestAnimationFrame(()=> screen.scrollTop = screen.scrollHeight);
+    }
+
+    function escapeHtml(str){
+      return str.replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+    }
+
+    function pushMessage(text, from = 'me'){
+      const msg = {text: text.trim(), from, t: Date.now()};
+      state.push(msg);
+      if(state.length > 250) state.shift();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      render();
+    }
+
+    sendBtn.addEventListener('click', send);
+    inputEl.addEventListener('keydown', e => { if(e.key === 'Enter') send(); });
+
+    function send(){
+      const text = inputEl.value.trim();
+      if(!text) return; inputEl.value = '';
+      pushMessage(text, 'me');
+      // simulate reply with typing indicator + iPhone-style delay
+      showTyping(() => {
+        const reply = autoReply(text);
+        pushMessage(reply, 'you');
+      });
+    }
+
+    function showTyping(cb){
+      const typing = document.createElement('div');
+      typing.className = 'msg you';
+      typing.innerHTML = `<div class="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>`;
+      messagesEl.appendChild(typing);
+      screen.scrollTop = screen.scrollHeight;
+      // timing scales with message length
+      const ms = 700 + Math.min(2500, inputEl.value.length * 60);
+      setTimeout(()=>{
+        typing.remove(); cb && cb();
+      }, ms);
+    }
+
+    function autoReply(userText){
+      // Çok basit: aynısını yazma + birkaç sabit cevap
+      const lower = userText.toLowerCase();
+      if(lower.includes('merhaba') || lower.includes('selam')) return 'Merhaba! Nasılsın?';
+      if(lower.includes('nerede') || lower.includes('konum')) return 'Ben sanalım, fiziksel bir yerde değilim :)';
+      if(lower.includes('github')) return 'GitHub'da nasıl yayınlayacağına yardım edebilirim — repo oluştur, index.html ekle, Pages ayarla.';
+      // ters çeviri gibi eğlenceli dönüş
+      return userText.split('').reverse().join('').slice(0, 240) + ' — (otomatik cevap)';
+    }
+
+    // başlangıç mesajları
+    if(state.length === 0){
+      pushMessage('Selam! Bu iPhone-stil sohbet demosu. Bir şey yaz ve gönder :)', 'you');
+    } else {
+      render();
+    }
+
+    // küçük UX: tıklayınca input focus
+    document.querySelector('.phone').addEventListener('click', e => { if(e.target === screen || e.target === messagesEl) inputEl.focus(); });
+  </script></body>
+</html>
