@@ -3,176 +3,341 @@
 <html lang="tr">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>iPhone-styled Chat — Demo</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Premium Sohbet (Tek Dosya)</title>
   <style>
     :root{
-      --bg:#f2f5f7;
-      --phone-bg:linear-gradient(180deg,#0f1724 0%, #071428 100%);
-      --bubble-me:#0b93f6;
-      --bubble-you:#e5e7eb;
-      --glass: rgba(255,255,255,0.06);
-      --accent:#34d399;
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      --bg:#0f1724; --card:#0b1220; --muted:#94a3b8; --accent:#6ee7b7; --accent-2:#7c3aed; --glass: rgba(255,255,255,0.04);
+      --radius:14px; --glass-2: rgba(255,255,255,0.02);
     }
-    html,body{height:100%;margin:0;background:var(--bg);display:grid;place-items:center}/* Phone frame */
-.phone{
-  width:360px;
-  height:720px;
-  border-radius:36px;
-  padding:20px;
-  box-sizing:border-box;
-  background:var(--phone-bg);
-  box-shadow: 0 30px 60px rgba(2,6,23,0.5), inset 0 -10px 30px rgba(0,0,0,0.4);
-  position:relative;
-  overflow:hidden;
-  transform-origin:center center;
-  animation: float 6s ease-in-out infinite;
-}
-@keyframes float{
-  0%{transform: translateY(0) rotate(-1deg)}
-  50%{transform: translateY(-8px) rotate(1deg)}
-  100%{transform: translateY(0) rotate(-1deg)}
-}
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial; background:linear-gradient(180deg,#071024 0%, #081426 60%); color:#e6eef8}
+    .app{display:grid;grid-template-columns:300px 1fr;gap:18px;padding:18px;max-width:1200px;margin:18px auto}
+    .sidebar{background:linear-gradient(180deg,var(--card), #071127);padding:16px;border-radius:12px;min-height:80vh;box-shadow:0 6px 30px rgba(2,6,23,0.6)}
+    .brand{display:flex;gap:12px;align-items:center;margin-bottom:12px}
+    .logo{width:46px;height:46px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;font-weight:700}
+    .controls{display:flex;gap:8px;align-items:center}
+    .btn{background:var(--glass);border:1px solid rgba(255,255,255,0.04);padding:8px 10px;border-radius:10px;color:var(--muted);cursor:pointer}
+    .rooms{margin-top:12px}
+    .room{padding:8px;border-radius:10px;display:flex;align-items:center;gap:10px;cursor:pointer}
+    .room:hover{background:rgba(255,255,255,0.02)}
+    .active{background:linear-gradient(90deg, rgba(124,58,237,0.16), rgba(110,231,183,0.06));border:1px solid rgba(124,58,237,0.15)}
+    .main{min-height:80vh;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:12px;border-radius:12px;display:flex;flex-direction:column}
+    .header{display:flex;justify-content:space-between;align-items:center;padding:8px}
+    .chat-window{flex:1;overflow:auto;padding:12px;border-radius:12px;background:linear-gradient(180deg,var(--glass-2),transparent);}
+    .composer{display:flex;gap:8px;padding:10px;border-top:1px solid rgba(255,255,255,0.03)}
+    .input{flex:1;padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:inherit}
+    .message{display:flex;gap:12px;margin-bottom:10px;align-items:flex-start}
+    .avatar{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:600}
+    .bubble{background:linear-gradient(180deg,#071429, #07122b);padding:10px;border-radius:12px;max-width:70%;box-shadow:0 6px 18px rgba(2,6,23,0.6)}
+    .me{flex-direction:row-reverse}
+    .me .bubble{background:linear-gradient(90deg,var(--accent), rgba(110,231,183,0.06));color:#051318}
+    .meta{font-size:12px;color:var(--muted);margin-top:6px}
+    .small{font-size:12px;color:var(--muted)}
+    .toolbar{display:flex;gap:8px}
+    .search{width:220px;padding:8px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:inherit}
+    .badge{padding:4px 8px;border-radius:999px;background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#031016;font-weight:700}/* modals & panels */
+.modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(2,6,23,0.6);z-index:40}
+.card{background:linear-gradient(180deg,#071127,#071022);padding:18px;border-radius:12px;min-width:320px;max-width:900px}
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.user-list{margin-top:12px;max-height:34vh;overflow:auto}
+.user-item{display:flex;gap:10px;align-items:center;padding:8px;border-radius:8px}
 
-/* notch */
-.notch{position:absolute;left:50%;transform:translateX(-50%);top:6px;width:160px;height:30px;background:rgba(0,0,0,0.35);border-radius:14px}
+/* responsive */
+@media(max-width:900px){.app{grid-template-columns:1fr;}.sidebar{order:2}.main{order:1}}
 
-/* header */
-.top{color:#fff;text-align:center;padding:8px 0;font-weight:600}
-
-/* chat area */
-.screen{height:580px;background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent 30%), url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><g fill="none" stroke="rgba(255,255,255,0.02)" stroke-width="1"><circle cx="100" cy="100" r="60"/><circle cx="40" cy="40" r="20"/><circle cx="160" cy="160" r="10"/></g></svg>') no-repeat right top/180px auto; border-radius:20px; padding:16px; box-sizing:border-box; overflow:auto; scroll-behavior:smooth}
-
-.messages{display:flex;flex-direction:column;gap:12px;padding-bottom:16px}
-
-.msg{max-width:80%;padding:10px 14px;border-radius:18px;line-height:1.2;box-shadow:0 6px 14px rgba(2,6,23,0.35);opacity:0;transform:translateY(18px) scale(0.98);animation:appear .45s forwards cubic-bezier(.22,1,.36,1)}
-@keyframes appear{to{opacity:1;transform:none}}
-
-.me{align-self:flex-end;background:linear-gradient(180deg,var(--bubble-me), #005fbf);color:white;border-bottom-right-radius:6px}
-.you{align-self:flex-start;background:var(--bubble-you);color:#111;border-bottom-left-radius:6px}
-
-/* subtle typing indicator */
-.typing{display:inline-flex;gap:6px;align-items:center;padding:8px 12px;border-radius:16px;background:var(--bubble-you);}
-.dot{width:8px;height:8px;border-radius:50%;background:#7b7b7b;opacity:0.85;animation:blink 1s infinite}
-.dot:nth-child(2){animation-delay:.15s}
-.dot:nth-child(3){animation-delay:.3s}
-@keyframes blink{0%,80%{opacity:.15;transform:translateY(0)}40%{opacity:1;transform:translateY(-4px)}}
-
-/* input area */
-.composer{display:flex;gap:10px;align-items:center;padding-top:12px}
-.input{flex:1;background:rgba(255,255,255,0.06);backdrop-filter:blur(6px);padding:12px 14px;border-radius:999px;color:#fff;border:1px solid rgba(255,255,255,0.03);outline:none}
-.btn{background:var(--accent);border:none;padding:10px 14px;border-radius:12px;color:#042;cursor:pointer;font-weight:600}
-
-/* small screens */
-@media(max-width:420px){.phone{width:92vw;height:86vh}}
-
-/* message bubble slide-in directions */
-.me{animation-name:slide-me, appear;animation-duration:.42s,.45s;animation-timing-function:cubic-bezier(.2,.9,.35,1),cubic-bezier(.22,1,.36,1)}
-.you{animation-name:slide-you, appear;animation-duration:.42s,.45s;animation-timing-function:cubic-bezier(.2,.9,.35,1),cubic-bezier(.22,1,.36,1)}
-@keyframes slide-me{from{transform:translateX(30px) scale(.98);opacity:0}to{transform:none;opacity:1}}
-@keyframes slide-you{from{transform:translateX(-30px) scale(.98);opacity:0}to{transform:none;opacity:1}}
-
-/* small chrome for cursor */
-.meta{font-size:12px;color:rgba(255,255,255,0.6);text-align:center;margin-top:8px}
+/* small helpers */
+.muted{color:var(--muted)}
+.pill{padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.03)}
+.file-preview{max-width:200px;border-radius:8px;margin-top:8px;border:1px solid rgba(255,255,255,0.04)}
+.reaction{display:inline-block;padding:6px;border-radius:8px;margin-right:6px}
 
   </style>
 </head>
 <body>
-  <div class="phone" role="application" aria-label="iPhone chat demo">
-    <div class="notch"></div>
-    <div class="top">Sohbet — iPhone Demo</div><div id="screen" class="screen" aria-live="polite">
-  <div class="messages" id="messages"></div>
-</div>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">PS</div>
+        <div>
+          <div style="font-weight:700">Premium Sohbet</div>
+          <div class="muted" style="font-size:13px">Tek dosya - local & multi-tab demo</div>
+        </div>
+      </div><div class="controls">
+    <button class="btn" id="btnProfile">Profil</button>
+    <button class="btn" id="btnSettings">Ayarlar</button>
+    <span style="flex:1"></span>
+    <span class="badge" id="premiumBadge">Premium</span>
+  </div>
 
-<div class="composer">
-  <input id="input" class="input" placeholder="Bir şey yaz..." maxlength="360" />
-  <button id="send" class="btn">Gönder</button>
-</div>
-<div class="meta">Yerel demo · Mesajlar tarayıcıda saklanır</div>
+  <div class="rooms" id="rooms">
+    <!-- rooms rendered here -->
+  </div>
 
-  </div>  <script>
-    // Basit sohbet demo: yerelde saklama + iPhone benzeri animasyon
-    const messagesEl = document.getElementById('messages');
-    const inputEl = document.getElementById('input');
-    const sendBtn = document.getElementById('send');
-    const screen = document.getElementById('screen');
+  <hr style="border:none;height:1px;background:rgba(255,255,255,0.02);margin:12px 0">
+  <div style="display:flex;justify-content:space-between;align-items:center"><div class="muted">Kullanıcılar</div><div class="small">Çoklu-tab: BroadcastChannel</div></div>
+  <div class="user-list" id="userList"></div>
 
-    // yükle
-    const STORAGE_KEY = 'iphone-chat-demo-msgs-v1';
-    let state = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+    <input id="quickRoom" class="input" placeholder="Yeni oda adı" />
+    <button class="btn" id="createRoom">Oluştur</button>
+  </div>
+</aside>
 
-    function render(){
-      messagesEl.innerHTML = '';
-      state.forEach((m, i) => {
-        const el = document.createElement('div');
-        el.className = 'msg ' + (m.from === 'me' ? 'me' : 'you');
-        el.innerHTML = `<div>${escapeHtml(m.text)}</div>`;
-        // staggered animation delay for a more 'live' feel
-        el.style.animationDelay = (i * 40) + 'ms';
-        messagesEl.appendChild(el);
+<main class="main">
+  <div class="header">
+    <div style="display:flex;gap:12px;align-items:center">
+      <div id="currentRoomTitle" style="font-weight:700"># Genel</div>
+      <div class="small muted" id="roomDesc">Herkese açık oda</div>
+    </div>
+    <div class="toolbar">
+      <input class="search" id="searchMessages" placeholder="Mesajlarda ara..." />
+      <button class="btn" id="btnEmojis">🙂</button>
+    </div>
+  </div>
+
+  <div class="chat-window" id="chatWindow"></div>
+
+  <div class="composer">
+    <input id="messageInput" class="input" placeholder="Mesaj yaz... (Markdown destekli)" />
+    <input type="file" id="fileInput" style="display:none" />
+    <button class="btn" id="attachBtn">📎</button>
+    <button class="btn" id="sendBtn">Gönder</button>
+  </div>
+</main>
+
+  </div>  <!-- modals -->  <div id="modalProfile" class="modal" style="display:none">
+    <div class="card">
+      <h3>Profil Ayarları</h3>
+      <div style="display:flex;gap:10px;align-items:center;margin-top:8px">
+        <div id="profileAvatar" class="avatar" style="width:64px;height:64px;border-radius:14px;background:linear-gradient(90deg,var(--accent),var(--accent-2));font-size:20px">U</div>
+        <div style="flex:1">
+          <input id="username" class="input" placeholder="Kullanıcı adı" />
+          <div class="small muted">Bu isimle diğer sekmeler sizi görecek.</div>
+        </div>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn" id="saveProfile">Kaydet</button>
+        <button class="btn" id="closeProfile">İptal</button>
+      </div>
+    </div>
+  </div>  <div id="modalSettings" class="modal" style="display:none">
+    <div class="card">
+      <h3>Ayarlar</h3>
+      <div class="settings-grid" style="margin-top:10px">
+        <div>
+          <label class="small muted">Tema</label>
+          <div style="display:flex;gap:8px;margin-top:6px"><button class="btn" id="themeLight">Light</button><button class="btn" id="themeDark">Dark</button></div>
+        </div>
+        <div>
+          <label class="small muted">Bildirimler</label>
+          <div style="display:flex;gap:8px;margin-top:6px"><button class="btn" id="notifyToggle">Aç/Kapa</button></div>
+        </div>
+        <div>
+          <label class="small muted">Dosya yükleme (premium)</label>
+          <div class="small muted">Premium kullanıcılar 10MB yerine 50MB'a kadar yükleyebilir.</div>
+        </div>
+        <div>
+          <label class="small muted">Okunma fişleri</label>
+          <div class="small muted">Okundu bilgisi gösterilsin mi?</div>
+        </div>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn" id="closeSettings">Kapat</button>
+      </div>
+    </div>
+  </div>  <template id="messageTpl">
+    <div class="message">
+      <div class="avatar">A</div>
+      <div>
+        <div class="bubble"><div class="author">User</div><div class="text">Hi</div></div>
+        <div class="meta">12:00 • <span class="small muted">okundu</span></div>
+      </div>
+    </div>
+  </template>  <script>
+    // Single-file premium chat demo
+    // Features:
+    // - single HTML file, no backend
+    // - multi-tab real-time via BroadcastChannel
+    // - localStorage persistence
+    // - rooms, user list, DMs (simulated), reactions, edit/delete, search, file preview
+    // - premium badge + premium-only features toggled in settings
+
+    const defaultRooms = [{id:'general',name:'# Genel',desc:'Herkese açık oda'}];
+    const state = {
+      rooms: JSON.parse(localStorage.getItem('ps_rooms')|| 'null') || defaultRooms,
+      currentRoom: localStorage.getItem('ps_currentRoom') || 'general',
+      username: localStorage.getItem('ps_username') || ('Kullanici'+Math.floor(Math.random()*999)),
+      messages: JSON.parse(localStorage.getItem('ps_messages')|| '{}'),
+      users: JSON.parse(localStorage.getItem('ps_users')|| '{}'),
+      premium: true,
+      notify: true,
+      readReceipts: true
+    };
+
+    // BroadcastChannel for cross-tab comms (real-time feel)
+    const channel = (window.BroadcastChannel) ? new BroadcastChannel('premium_sohbet_chan') : null;
+    if(channel){ channel.onmessage = (ev) => { handleIncoming(ev.data); } }
+
+    // utils
+    const el = id=>document.getElementById(id);
+    const save = ()=>{ localStorage.setItem('ps_rooms', JSON.stringify(state.rooms)); localStorage.setItem('ps_currentRoom', state.currentRoom); localStorage.setItem('ps_messages', JSON.stringify(state.messages)); localStorage.setItem('ps_users', JSON.stringify(state.users)); localStorage.setItem('ps_username', state.username); }
+    const nowFmt = ()=>{ const d=new Date(); return d.toLocaleTimeString(); }
+    const uid = (n=6)=>Math.random().toString(36).slice(2,2+n);
+
+    // init
+    function init(){
+      renderRooms(); renderUser(); renderUsersList(); renderChat(); updateProfileUI(); attachEvents();
+      announcePresence('join');
+    }
+
+    function announcePresence(kind='update'){
+      state.users[state.username] = {name:state.username, last:Date.now(), avatar:avatarFor(state.username), premium:state.premium};
+      save();
+      if(channel) channel.postMessage({type:'presence', user:state.users[state.username], kind});
+      renderUsersList();
+    }
+
+    function handleIncoming(msg){
+      if(!msg) return;
+      if(msg.type==='message'){
+        state.messages[msg.room] = state.messages[msg.room] || [];
+        state.messages[msg.room].push(msg.payload);
+        save(); if(msg.room===state.currentRoom) renderChat();
+      } else if(msg.type==='presence'){
+        state.users[msg.user.name] = msg.user; save(); renderUsersList();
+      } else if(msg.type==='delete'){
+        // find and mark deleted
+        const arr = state.messages[msg.room] || [];
+        const m = arr.find(x=>x.id===msg.id);
+        if(m){ m.deleted=true; save(); renderChat(); }
+      } else if(msg.type==='edit'){
+        const arr = state.messages[msg.room] || [];
+        const m = arr.find(x=>x.id===msg.payload.id);
+        if(m){ m.text=msg.payload.text; m.edited=true; save(); renderChat(); }
+      }
+    }
+
+    function postMessage(text, file){
+      if(!text && !file) return;
+      const msg = {id:uid(8), from:state.username, text:text||'', file:file||null, time:new Date().toISOString(), ts:nowFmt(), edited:false, reactions:{}, deleted:false};
+      state.messages[state.currentRoom] = state.messages[state.currentRoom] || [];
+      state.messages[state.currentRoom].push(msg); save();
+      if(channel) channel.postMessage({type:'message', room:state.currentRoom, payload:msg});
+      renderChat(); if(state.notify) playSendSound();
+    }
+
+    function renderRooms(){
+      const wrap = el('rooms'); wrap.innerHTML='';
+      state.rooms.forEach(r=>{
+        const d = document.createElement('div'); d.className='room'+(r.id===state.currentRoom? ' active':''); d.innerHTML = `<div style="width:10px"></div><div style="flex:1">${r.name}</div><div class="small muted">${r.desc||''}</div>`;
+        d.onclick = ()=>{ state.currentRoom=r.id; save(); renderRooms(); renderChat(); el('currentRoomTitle').innerText = r.name; el('roomDesc').innerText=r.desc||''; };
+        wrap.appendChild(d);
       });
-      // scroll bottom
-      requestAnimationFrame(()=> screen.scrollTop = screen.scrollHeight);
     }
 
-    function escapeHtml(str){
-      return str.replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
-    }
-
-    function pushMessage(text, from = 'me'){
-      const msg = {text: text.trim(), from, t: Date.now()};
-      state.push(msg);
-      if(state.length > 250) state.shift();
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      render();
-    }
-
-    sendBtn.addEventListener('click', send);
-    inputEl.addEventListener('keydown', e => { if(e.key === 'Enter') send(); });
-
-    function send(){
-      const text = inputEl.value.trim();
-      if(!text) return; inputEl.value = '';
-      pushMessage(text, 'me');
-      // simulate reply with typing indicator + iPhone-style delay
-      showTyping(() => {
-        const reply = autoReply(text);
-        pushMessage(reply, 'you');
+    function renderUsersList(){
+      const uwrap = el('userList'); uwrap.innerHTML='';
+      Object.values(state.users).forEach(u=>{
+        const it = document.createElement('div'); it.className='user-item';
+        it.innerHTML = `<div class="avatar" style="background:${u.avatar.bg}">${u.avatar.let}</div><div style="flex:1"><div style="font-weight:700">${u.name}${u.premium? ' <span class=\"small\">⭐</span>':''}</div><div class="small muted">Son: ${timeAgo(u.last)}</div></div>`;
+        uwrap.appendChild(it);
       });
     }
 
-    function showTyping(cb){
-      const typing = document.createElement('div');
-      typing.className = 'msg you';
-      typing.innerHTML = `<div class="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>`;
-      messagesEl.appendChild(typing);
-      screen.scrollTop = screen.scrollHeight;
-      // timing scales with message length
-      const ms = 700 + Math.min(2500, inputEl.value.length * 60);
-      setTimeout(()=>{
-        typing.remove(); cb && cb();
-      }, ms);
+    function renderUser(){
+      el('profileAvatar').innerText = avatarFor(state.username).let;
+      el('username').value = state.username;
+      el('premiumBadge').style.display = state.premium ? 'inline-block' : 'none';
     }
 
-    function autoReply(userText){
-      // Çok basit: aynısını yazma + birkaç sabit cevap
-      const lower = userText.toLowerCase();
-      if(lower.includes('merhaba') || lower.includes('selam')) return 'Merhaba! Nasılsın?';
-      if(lower.includes('nerede') || lower.includes('konum')) return 'Ben sanalım, fiziksel bir yerde değilim :)';
-      if(lower.includes('github')) return 'GitHub'da nasıl yayınlayacağına yardım edebilirim — repo oluştur, index.html ekle, Pages ayarla.';
-      // ters çeviri gibi eğlenceli dönüş
-      return userText.split('').reverse().join('').slice(0, 240) + ' — (otomatik cevap)';
+    function avatarFor(name){
+      const letc = (name||'U').slice(0,1).toUpperCase();
+      const hue = Math.abs([...name].reduce((s,c)=>s+c.charCodeAt(0),0)) % 360;
+      const bg = `linear-gradient(90deg,hsl(${hue} 70% 50%), hsl(${(hue+45)%360} 70% 45%))`;
+      return {let:letc,bg};
     }
 
-    // başlangıç mesajları
-    if(state.length === 0){
-      pushMessage('Selam! Bu iPhone-stil sohbet demosu. Bir şey yaz ve gönder :)', 'you');
-    } else {
-      render();
+    function timeAgo(ts){
+      const diff = Date.now() - ts; if(diff<60000) return 'az önce'; if(diff<3600000) return Math.round(diff/60000)+' dk'; if(diff<86400000) return Math.round(diff/3600000)+' sa'; return Math.round(diff/86400000)+' gün';
     }
 
-    // küçük UX: tıklayınca input focus
-    document.querySelector('.phone').addEventListener('click', e => { if(e.target === screen || e.target === messagesEl) inputEl.focus(); });
+    function renderChat(filter){
+      const win = el('chatWindow'); win.innerHTML='';
+      const msgs = (state.messages[state.currentRoom]||[]).slice(-500);
+      msgs.filter(m=>!filter||m.text.toLowerCase().includes(filter.toLowerCase())).forEach(m=>{
+        const node = document.importNode(document.getElementById('messageTpl').content,true);
+        const wrapper = node.querySelector('.message');
+        if(m.from===state.username) wrapper.classList.add('me');
+        const av = wrapper.querySelector('.avatar'); av.style.background = avatarFor(m.from).bg; av.innerText = avatarFor(m.from).let;
+        wrapper.querySelector('.author').innerText = m.from + (m.edited? ' • düzenlendi':'' );
+        const textEl = wrapper.querySelector('.text'); textEl.innerHTML = renderMarkdown(escapeHtml(m.text) || '');
+        if(m.deleted){ textEl.innerHTML = '<i>Mesaj silindi</i>'; }
+        if(m.file){ const p = document.createElement('div'); p.className='file-preview'; if(m.file.type && m.file.type.startsWith('image/')){ p.innerHTML = `<img src="${m.file.data}" style="max-width:100%;border-radius:8px">`; } else { p.innerHTML = `<a download="${m.file.name}" href="${m.file.data}" class="pill">Dosya indir: ${m.file.name}</a>`; } wrapper.querySelector('.bubble').appendChild(p); }
+        const meta = wrapper.querySelector('.meta'); meta.innerHTML = `${new Date(m.time).toLocaleString()} • <span class="small muted">${state.readReceipts? 'okundu':''}</span>`;
+        // actions
+        const actions = document.createElement('div'); actions.style.marginTop='6px';
+        if(m.from===state.username && !m.deleted){ const del = document.createElement('button'); del.className='btn'; del.innerText='Sil'; del.onclick=()=>deleteMsg(m.id); actions.appendChild(del); const edit = document.createElement('button'); edit.className='btn'; edit.innerText='Düzenle'; edit.onclick=()=>editMsg(m.id); actions.appendChild(edit); }
+        const react = document.createElement('button'); react.className='btn'; react.innerText='❤️'; react.onclick=()=>toggleReaction(m.id,'❤️'); actions.appendChild(react);
+        wrapper.querySelector('.bubble').appendChild(actions);
+        win.appendChild(node);
+      });
+      win.scrollTop = win.scrollHeight;
+    }
+
+    function playSendSound(){ const ctx = new (window.AudioContext||window.webkitAudioContext)(); const o = ctx.createOscillator(); const g = ctx.createGain(); o.type='sine'; o.frequency.value=600; g.gain.value=0.02; o.connect(g); g.connect(ctx.destination); o.start(); setTimeout(()=>{ o.stop(); ctx.close(); },80); }
+
+    function attachEvents(){
+      el('btnProfile').onclick = ()=>el('modalProfile').style.display='flex';
+      el('closeProfile').onclick = ()=>el('modalProfile').style.display='none';
+      el('saveProfile').onclick = ()=>{ state.username = el('username').value || state.username; renderUser(); announcePresence('update'); el('modalProfile').style.display='none'; }
+      el('btnSettings').onclick = ()=>el('modalSettings').style.display='flex';
+      el('closeSettings').onclick = ()=>el('modalSettings').style.display='none';
+      el('createRoom').onclick = ()=>{
+        const name = el('quickRoom').value.trim(); if(!name) return alert('Oda adı girin'); const id = name.toLowerCase().replace(/[^a-z0-9]+/g,'-')+uid(2);
+        state.rooms.push({id,name:'# '+name,desc:'Kullanıcı odası'}); save(); renderRooms(); el('quickRoom').value='';
+      }
+      el('sendBtn').onclick = ()=>{ const t=el('messageInput').value; postFileMessage(t); el('messageInput').value=''; }
+      el('attachBtn').onclick = ()=>el('fileInput').click();
+      el('fileInput').onchange = async(e)=>{
+        const f = e.target.files[0]; if(!f) return;
+        if(!state.premium && f.size>10*1024*1024){ alert('Ücretsiz kullanıcılar için dosya boyutu 10MB ile sınırlıdır'); return; }
+        if(state.premium && f.size>50*1024*1024){ alert('Dosya boyutu 50MB limit'); return; }
+        const data = await toDataURL(f);
+        postMessage('', {name:f.name,size:f.size,type:f.type,data});
+      }
+      el('messageInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); el('sendBtn').click(); } });
+      el('searchMessages').addEventListener('input', (e)=>{ renderChat(e.target.value); });
+      el('btnEmojis').onclick = ()=>{ insertAtCursor(el('messageInput'), '🙂'); }
+      el('themeLight').onclick = ()=>{ document.documentElement.style.setProperty('--bg','#f8fafc'); document.documentElement.style.setProperty('--card','#ffffff'); document.body.style.color='#051323'; }
+      el('themeDark').onclick = ()=>{ document.documentElement.style.removeProperty('--bg'); document.documentElement.style.removeProperty('--card'); document.body.style.color=''; }
+      el('notifyToggle').onclick = ()=>{ state.notify=!state.notify; alert('Bildirim: '+(state.notify?'Açık':'Kapalı')); save(); }
+      // window unload
+      window.addEventListener('beforeunload', ()=>{ announcePresence('leave'); });
+    }
+
+    async function toDataURL(file){ return new Promise((res,rej)=>{ const reader = new FileReader(); reader.onload = ()=>res(reader.result); reader.onerror=rej; reader.readAsDataURL(file); }); }
+
+    function postFileMessage(text){ // check if last file chosen
+      postMessage(el('messageInput').value||text);
+    }
+
+    function deleteMsg(id){ if(!confirm('Mesajı silmek istiyor musunuz?')) return; const arr = state.messages[state.currentRoom] || []; const m = arr.find(x=>x.id===id); if(m){ m.deleted=true; save(); if(channel) channel.postMessage({type:'delete', room:state.currentRoom, id}); renderChat(); } }
+    function editMsg(id){ const arr = state.messages[state.currentRoom] || []; const m = arr.find(x=>x.id===id); if(!m) return; const t = prompt('Mesajı düzenle:', m.text); if(t===null) return; m.text = t; m.edited = true; save(); if(channel) channel.postMessage({type:'edit', room:state.currentRoom, payload:{id, text:t}}); renderChat(); }
+    function toggleReaction(id, emoji){ const arr = state.messages[state.currentRoom] || []; const m = arr.find(x=>x.id===id); if(!m) return; m.reactions[emoji] = (m.reactions[emoji]||0)+1; save(); if(channel) channel.postMessage({type:'message', room:state.currentRoom, payload:m}); renderChat(); }
+
+    function renderMarkdown(md){ // extremely tiny markdown-ish renderer: **bold**, _italic_, `code`
+      return md.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/_(.*?)_/g,'<em>$1</em>').replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\n/g,'<br>');
+    }
+    function escapeHtml(s){ if(!s) return ''; return s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+    function insertAtCursor(field, value) { const start = field.selectionStart || 0; const end = field.selectionEnd || 0; const text = field.value; field.value = text.slice(0,start) + value + text.slice(end); field.selectionStart = field.selectionEnd = start + value.length; field.focus(); }
+
+    // initial room if missing
+    if(!state.rooms || state.rooms.length===0) state.rooms = defaultRooms;
+    // set UI title
+    const curRoom = state.rooms.find(r=>r.id===state.currentRoom) || state.rooms[0]; if(curRoom){ document.addEventListener('DOMContentLoaded', ()=>{ el('currentRoomTitle').innerText = curRoom.name; el('roomDesc').innerText = curRoom.desc||''; }); }
+
+    init();
   </script></body>
 </html>
